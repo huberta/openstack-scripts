@@ -31,7 +31,7 @@ echo "Net = $NET_ID"
 echo "DHCP Tap = $DHCP_TAP"
 
 if [ $LOCALHOSTNAME != $HYPERVISORNAME ]; then
-  $SSH="ssh root@HYPERVISORNAME"
+  SSH="ssh root@HYPERVISORNAME"
   echo "VM on remote host"
 fi
 
