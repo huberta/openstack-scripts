@@ -1,6 +1,4 @@
 #!/bin/bash
-source creds_kmadac
-
 GREP=/bin/grep
 AWK=/usr/bin/awk
 QUANTUM=/usr/bin/quantum
