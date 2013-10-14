@@ -20,7 +20,7 @@ Example:
 
 * tcpdump installed
 * multitail installed
-* creds file in same directory as script (creds file name is hardcoded to script - feel free to change it)
+* sourced creds file with tenant name, where instance belongs
 * nova conf in `/etc/nova/nova.conf` (file is used to get login/pass credentials to nova database)
 * passwordless ssh connectivity to compute nodes by root user
 
