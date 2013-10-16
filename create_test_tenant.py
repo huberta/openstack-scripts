@@ -1,4 +1,13 @@
 __author__ = 'kmadac'
+"""
+Script prepares new tenant with the following properties:
+1. Create new tenant. Name is specified as a user email as command line parameter
+2. Creates new user and this user is added _member_ to tenant. Password is second argument of script
+3. Admin user will be added to tenant with role admin
+4. Private network is created
+5. Router is created
+6. Router is connected to external network and to private network
+"""
 
 import os
 import keystoneclient.v2_0.client as ksclient
