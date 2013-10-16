@@ -104,7 +104,10 @@ def create_router(neutron, router_name='tenant_to_public', external_net_name='ex
 
     private_subnet = neutron.list_subnets(name=private_subnet_name)['subnets']
     if private_subnet:
-        neutron.add_interface_router(router_id, {'subnet_id': private_subnet[0]['id']})
+        try:
+            neutron.add_interface_router(router_id, {'subnet_id': private_subnet[0]['id']})
+        except neutronclient.common.exceptions.NeutronClientException as e:
+            print e.message
     else:
         print "Error: Private subnet {0} not found. Router not connected!".format(private_subnet)
 
