@@ -10,6 +10,8 @@ import argparse
 endpoint = "http://192.168.122.200:35357/v2.0"
 keystone_url = "http://192.168.122.200:5000/v2.0"
 admin_token = "ADMIN"
+admin_user_name = 'admin'
+admin_password = 'admin_pass'
 
 
 def create_tenant(keystone, useremail):
@@ -118,8 +120,8 @@ def main():
     new_tenant = create_tenant(keystone, args.user_email)
     create_user(keystone, args.user_email, password=args.password, tenant=new_tenant)
 
-    neutron = nclient.Client(username='admin',
-                             password='admin_pass',
+    neutron = nclient.Client(username=admin_user_name,
+                             password=admin_password,
                              tenant_name=new_tenant.name,
                              auth_url=keystone_url)
 
