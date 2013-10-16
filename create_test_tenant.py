@@ -133,7 +133,7 @@ def create_router(neutron, router_name='tenant_to_public', external_net_name='ex
 def main():
     parser = argparse.ArgumentParser(description='Script for creating testing tenant')
     parser.add_argument('user_email', action="store", help="User email will be used as name of tenant")
-    parser.add_argument('password', action="store", help="Password for user", default='Start123')
+    parser.add_argument('password', action="store", help="Password for user")
 
     args = parser.parse_args()
 
