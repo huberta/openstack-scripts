@@ -1,5 +1,6 @@
 __author__ = 'kmadac'
 
+import os
 import keystoneclient.v2_0.client as ksclient
 import keystoneclient.apiclient.exceptions
 import neutronclient.v2_0.client as nclient
@@ -7,12 +8,20 @@ import neutronclient.common.exceptions
 
 import argparse
 
-endpoint = "http://192.168.122.200:35357/v2.0"
-keystone_url = "http://192.168.122.200:5000/v2.0"
-admin_token = "ADMIN"
-admin_user_name = 'admin'
-admin_password = 'admin_pass'
 
+def get_keystone_creds():
+    d = dict()
+    d['username'] = os.environ['OS_USERNAME']
+    d['password'] = os.environ['OS_PASSWORD']
+    d['auth_url'] = os.environ['OS_AUTH_URL']
+    return d
+
+
+def get_service_creds():
+    d = dict()
+    d['token'] = os.environ['OS_SERVICE_TOKEN']
+    d['endpoint'] = os.environ['OS_SERVICE_ENDPOINT']
+    return d
 
 def create_tenant(keystone, useremail):
     new_tenant = None
@@ -119,14 +128,15 @@ def main():
 
     args = parser.parse_args()
 
-    keystone = ksclient.Client(token=admin_token, endpoint=endpoint)
+    service_creds = get_service_creds()
+    keystone_creds = get_keystone_creds()
+
+    keystone = ksclient.Client(**service_creds)
     new_tenant = create_tenant(keystone, args.user_email)
     create_user(keystone, args.user_email, password=args.password, tenant=new_tenant)
 
-    neutron = nclient.Client(username=admin_user_name,
-                             password=admin_password,
-                             tenant_name=new_tenant.name,
-                             auth_url=keystone_url)
+    keystone_creds['tenant_name'] = new_tenant.name
+    neutron = nclient.Client(**keystone_creds)
 
     create_internal_network(neutron)
     create_router(neutron)
