@@ -77,6 +77,36 @@ def create_internal_network(neutron, network_name='private_network', network_add
     return network, subnet
 
 
+def create_router(neutron, router_name='tenant_to_public', external_net_name='ext_net',
+                  private_subnet_name='sub_private_network'):
+
+    router = neutron.list_routers(name=router_name)['routers']
+
+    if not router:
+        router = neutron.create_router({'router': {'name': router_name, 'admin_state_up': True}})
+        router_id = router['router']['id']
+    else:
+        print "Router {0} already exists".format(router_name)
+        router_id = router[0]['id']
+
+    # connect router to external network
+
+    external_net = neutron.list_networks(name=external_net_name)['networks']
+
+    if external_net:
+        neutron.add_gateway_router(router_id, {'network_id': external_net[0]['id']})
+    else:
+        print "Error: External network {0} not found. Router not connected!".format(external_net_name)
+
+    # connect router to private network
+
+    private_subnet = neutron.list_subnets(name=private_subnet_name)['subnets']
+    if private_subnet:
+        neutron.add_interface_router(router_id, {'subnet_id': private_subnet[0]['id']})
+    else:
+        print "Error: Private subnet {0} not found. Router not connected!".format(private_subnet)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Script for creating testing tenant')
     parser.add_argument('user_email', action="store", help="User email will be used as name of tenant")
@@ -88,15 +118,13 @@ def main():
     new_tenant = create_tenant(keystone, args.user_email)
     create_user(keystone, args.user_email, password=args.password, tenant=new_tenant)
 
-    admin_user = keystone.users.find(name='admin')
-
     neutron = nclient.Client(username='admin',
                              password='admin_pass',
                              tenant_name=new_tenant.name,
                              auth_url=keystone_url)
+
     create_internal_network(neutron)
-
-
+    create_router(neutron)
 
 if __name__ == "__main__":
     main()
