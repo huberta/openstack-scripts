@@ -17,6 +17,7 @@ import neutronclient.common.exceptions
 
 import argparse
 
+import pdb
 
 def get_keystone_creds():
     d = dict()
@@ -70,7 +71,7 @@ def create_user(keystone, useremail, password, tenant, role_name='_member_'):
 
 def create_internal_network(neutron, network_name='private_network', network_address='192.168.0.0/24'):
     neutron.format = 'json'
-
+    
     networks = neutron.list_networks()
     network = None
 
@@ -83,7 +84,7 @@ def create_internal_network(neutron, network_name='private_network', network_add
 
     if not network:
         networkdict = {'name': network_name, 'admin_state_up': True}
-        network = neutron.create_network({'network': networkdict})
+        network = neutron.create_network({'network': networkdict})['network']
 
     subnet = None
     try:
@@ -134,6 +135,7 @@ def main():
     parser = argparse.ArgumentParser(description='Script for creating testing tenant')
     parser.add_argument('user_email', action="store", help="User email will be used as name of tenant")
     parser.add_argument('password', action="store", help="Password for user")
+    parser.add_argument('--extnet', '-e', action="store", default='external_network', help="Name of external network")
 
     args = parser.parse_args()
 
@@ -148,7 +150,7 @@ def main():
     neutron = nclient.Client(**keystone_creds)
 
     create_internal_network(neutron)
-    create_router(neutron)
+    create_router(neutron, external_net_name=args.extnet)
 
 if __name__ == "__main__":
     main()
