@@ -17,8 +17,6 @@ import neutronclient.common.exceptions
 
 import argparse
 
-import pdb
-
 def get_keystone_creds():
     d = dict()
     d['username'] = os.environ['OS_USERNAME']
@@ -44,13 +42,17 @@ def create_tenant(keystone, useremail):
     return new_tenant
 
 
-def create_user(keystone, useremail, password, tenant, role_name='_member_'):
+def create_user(keystone, useremail, password, tenant, role_name='_member_', username=None):
     new_user = None
+
+    if not username:
+        username=useremail
+
     try:
-        new_user = keystone.users.create(name=useremail, password=password, email=useremail, tenant_id=tenant.id)
+        new_user = keystone.users.create(name=username, password=password, email=useremail, tenant_id=tenant.id)
     except keystoneclient.apiclient.exceptions.Conflict:
         print "User {0} already exists".format(useremail)
-        new_user = keystone.users.find(name=useremail)
+        new_user = keystone.users.find(name=username)
 
     member_role = keystone.roles.find(name=role_name)
 
@@ -136,15 +138,23 @@ def main():
     parser.add_argument('user_email', action="store", help="User email will be used as name of tenant")
     parser.add_argument('password', action="store", help="Password for user")
     parser.add_argument('--extnet', '-e', action="store", default='external_network', help="Name of external network")
+    parser.add_argument('--tenusername', '-t', action="store", help="Default tenant and user name is email address, but can be overriden with this parameter")
 
     args = parser.parse_args()
+
+    if args.tenusername:
+        new_tenant_name = args.tenusername
+        new_user_name = args.tenusername
+    else:
+        new_tenant_name = args.user_email
+        new_user_name = args.user_email
 
     service_creds = get_service_creds()
     keystone_creds = get_keystone_creds()
 
     keystone = ksclient.Client(**service_creds)
-    new_tenant = create_tenant(keystone, args.user_email)
-    create_user(keystone, args.user_email, password=args.password, tenant=new_tenant)
+    new_tenant = create_tenant(keystone, new_tenant_name)
+    create_user(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name)
 
     keystone_creds['tenant_name'] = new_tenant.name
     neutron = nclient.Client(**keystone_creds)
