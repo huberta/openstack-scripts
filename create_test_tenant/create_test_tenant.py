@@ -44,7 +44,7 @@ def create_tenant(keystone, useremail):
     return new_tenant
 
 
-def create_user(keystone, useremail, password, tenant, role_name='_member_', username=None):
+def create_and_assign_users(keystone, useremail, password, tenant, role_name='_member_', username=None, assign_admin=False):
     new_user = None
 
     if not username:
@@ -63,15 +63,27 @@ def create_user(keystone, useremail, password, tenant, role_name='_member_', use
     except keystoneclient.apiclient.exceptions.Conflict:
         print "User {0} already has role {1} in tenant {2}".format(new_user.name, member_role.name, tenant.name)
 
-    admin_user = keystone.users.find(name='admin')
-    admin_role = keystone.roles.find(name='admin')
-    try:
-        keystone.roles.add_user_role(admin_user, admin_role, tenant)
-    except keystoneclient.apiclient.exceptions.Conflict:
-        print "User {0} already has role {1} in tenant {2}".format(admin_user.name, admin_role.name, tenant.name)
+    if assign_admin:
+        admin_user = keystone.users.find(name='admin')
+        admin_role = keystone.roles.find(name='admin')
+        try:
+            keystone.roles.add_user_role(admin_user, admin_role, tenant)
+        except keystoneclient.apiclient.exceptions.Conflict:
+            print "User {0} already has role {1} in tenant {2}".format(admin_user.name, admin_role.name, tenant.name)
 
     return new_user
 
+
+def unassign_admin_from_tenant(keystone, tenant):
+    admin_user = keystone.users.find(name='admin')
+    admin_role = keystone.roles.find(name='admin')
+    try:
+        keystone.roles.remove_user_role(admin_user, admin_role, tenant)
+    except NotFound as e:
+        print "Unassignment unsuccesfull: {0}".format(e.msg)
+        return False
+    
+    return True
 
 def create_internal_network(neutron, network_name='private_network', network_address='192.168.0.0/24'):
     neutron.format = 'json'
@@ -156,13 +168,15 @@ def main():
 
     keystone = ksclient.Client(**service_creds)
     new_tenant = create_tenant(keystone, new_tenant_name)
-    create_user(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name)
+    create_and_assign_users(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name, assign_admin=True)
 
     keystone_creds['tenant_name'] = new_tenant.name
     neutron = nclient.Client(**keystone_creds)
 
     create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
     create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
+    
+    unassign_admin_from_tenant(keystone, new_tenant)
 
 if __name__ == "__main__":
     main()
