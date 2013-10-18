@@ -17,6 +17,8 @@ import neutronclient.common.exceptions
 
 import argparse
 
+import pdb
+
 def get_keystone_creds():
     d = dict()
     d['username'] = os.environ['OS_USERNAME']
@@ -34,7 +36,7 @@ def get_service_creds():
 def create_tenant(keystone, useremail):
     new_tenant = None
     try:
-        new_tenant = keystone.tenants.create(tenant_name=useremail, description="Testing tenant", enabled=True)
+        new_tenant = keystone.tenants.create(tenant_name=useremail, description="Closed Beta Test", enabled=True)
     except keystoneclient.apiclient.exceptions.Conflict:
         print "Tenant {0} already exists".format(useremail)
         new_tenant = keystone.tenants.find(name=useremail)
@@ -159,8 +161,8 @@ def main():
     keystone_creds['tenant_name'] = new_tenant.name
     neutron = nclient.Client(**keystone_creds)
 
-    create_internal_network(neutron)
-    create_router(neutron, external_net_name=args.extnet)
+    create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
+    create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
 
 if __name__ == "__main__":
     main()
