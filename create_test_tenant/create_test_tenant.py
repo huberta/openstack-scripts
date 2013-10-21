@@ -114,6 +114,59 @@ def create_internal_network(neutron, network_name='private_network', network_add
     return network, subnet
 
 
+def preset_default_security_group(neutron, tenant):
+    # find default sucurity group id
+    security_groups = neutron.list_security_groups()['security_groups']
+    def_sec_group_id = [secg['id'] for secg in security_groups if secg['name'] == 'default' and secg['tenant_id'] == tenant.id][0]
+
+    # define request bodies
+    sec_group_rule_icmp = {'security_group_rule': { 'direction': 'ingress', 
+                                                    'security_group_id': def_sec_group_id, 
+                                                    'port_range_min': None, 
+                                                    'port_range_max': None, 
+                                                    'protocol': 'icmp',  
+                                                    'remote_group_id': None, 
+                                                    'remote_ip_prefix': '0.0.0.0/0' }}
+
+    sec_group_rule_tcp = {'security_group_rule': { 'direction': 'ingress', 
+                                                   'security_group_id': def_sec_group_id, 
+                                                   'port_range_min': None, 
+                                                   'port_range_max': None, 
+                                                   'protocol': 'tcp', 
+                                                   'remote_group_id': None, 
+                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+
+    sec_group_rule_udp = {'security_group_rule': { 'direction': 'ingress', 
+                                                   'security_group_id': def_sec_group_id, 
+                                                   'port_range_min': None, 
+                                                   'port_range_max': None, 
+                                                   'protocol': 'udp',  
+                                                   'remote_group_id': None, 
+                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+
+    # send requests to create groups
+    try:
+        neutron.create_security_group_rule(sec_group_rule_icmp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    try:
+        neutron.create_security_group_rule(sec_group_rule_tcp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    try:
+        neutron.create_security_group_rule(sec_group_rule_udp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    # delete default rules in default group
+    security_group_rules = neutron.list_security_group_rules()['security_group_rules']
+    def_sec_group_rules_id = [secgr['id'] for secgr in security_group_rules if secgr['tenant_id'] == tenant.id and secgr['protocol'] == None and secgr['direction'] == 'ingress']
+
+    for secrule_id in def_sec_group_rules_id:
+        neutron.delete_security_group_rule(secrule_id)
+
 def create_router(neutron, router_name='tenant_to_public', external_net_name='ext_net',
                   private_subnet_name='sub_private_network'):
 
@@ -175,6 +228,7 @@ def main():
 
     create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
     create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
+    preset_default_security_group(neutron, new_tenant)
     
     unassign_admin_from_tenant(keystone, new_tenant)
 
