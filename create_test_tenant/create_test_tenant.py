@@ -14,6 +14,7 @@ import keystoneclient.v2_0.client as ksclient
 import keystoneclient.apiclient.exceptions
 import neutronclient.v2_0.client as nclient
 import neutronclient.common.exceptions
+import novaclient.v1_1.client as novaclient
 
 import argparse
 
@@ -26,6 +27,12 @@ def get_keystone_creds():
     d['auth_url'] = os.environ['OS_AUTH_URL']
     return d
 
+def get_nova_creds():
+    d = dict()
+    d['username'] = os.environ['OS_USERNAME']
+    d['api_key'] = os.environ['OS_PASSWORD']
+    d['auth_url'] = os.environ['OS_AUTH_URL']
+    return d
 
 def get_service_creds():
     d = dict()
@@ -229,7 +236,14 @@ def main():
     create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
     create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
     preset_default_security_group(neutron, new_tenant)
-    
+
+    ncreds = get_nova_creds()
+    ncreds['project_id'] = new_tenant.name
+    nova = novaclient.Client(**ncreds)
+    nova.quotas.update(new_tenant.id, 
+                       ram=25600, cores=40, injected_file_content_bytes=10240, 
+                       instances=20, key_pairs=10, floating_ips=20, security_groups=20, security_group_rules=40)
+
     unassign_admin_from_tenant(keystone, new_tenant)
 
 if __name__ == "__main__":
