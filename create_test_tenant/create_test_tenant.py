@@ -14,8 +14,11 @@ import keystoneclient.v2_0.client as ksclient
 import keystoneclient.apiclient.exceptions
 import neutronclient.v2_0.client as nclient
 import neutronclient.common.exceptions
+import novaclient.v1_1.client as novaclient
 
 import argparse
+
+import pdb
 
 def get_keystone_creds():
     d = dict()
@@ -24,6 +27,12 @@ def get_keystone_creds():
     d['auth_url'] = os.environ['OS_AUTH_URL']
     return d
 
+def get_nova_creds():
+    d = dict()
+    d['username'] = os.environ['OS_USERNAME']
+    d['api_key'] = os.environ['OS_PASSWORD']
+    d['auth_url'] = os.environ['OS_AUTH_URL']
+    return d
 
 def get_service_creds():
     d = dict()
@@ -34,7 +43,7 @@ def get_service_creds():
 def create_tenant(keystone, useremail):
     new_tenant = None
     try:
-        new_tenant = keystone.tenants.create(tenant_name=useremail, description="Testing tenant", enabled=True)
+        new_tenant = keystone.tenants.create(tenant_name=useremail, description="Closed Beta Test", enabled=True)
     except keystoneclient.apiclient.exceptions.Conflict:
         print "Tenant {0} already exists".format(useremail)
         new_tenant = keystone.tenants.find(name=useremail)
@@ -42,7 +51,7 @@ def create_tenant(keystone, useremail):
     return new_tenant
 
 
-def create_user(keystone, useremail, password, tenant, role_name='_member_', username=None):
+def create_and_assign_users(keystone, useremail, password, tenant, role_name='_member_', username=None, assign_admin=False):
     new_user = None
 
     if not username:
@@ -61,15 +70,27 @@ def create_user(keystone, useremail, password, tenant, role_name='_member_', use
     except keystoneclient.apiclient.exceptions.Conflict:
         print "User {0} already has role {1} in tenant {2}".format(new_user.name, member_role.name, tenant.name)
 
-    admin_user = keystone.users.find(name='admin')
-    admin_role = keystone.roles.find(name='admin')
-    try:
-        keystone.roles.add_user_role(admin_user, admin_role, tenant)
-    except keystoneclient.apiclient.exceptions.Conflict:
-        print "User {0} already has role {1} in tenant {2}".format(admin_user.name, admin_role.name, tenant.name)
+    if assign_admin:
+        admin_user = keystone.users.find(name='admin')
+        admin_role = keystone.roles.find(name='admin')
+        try:
+            keystone.roles.add_user_role(admin_user, admin_role, tenant)
+        except keystoneclient.apiclient.exceptions.Conflict:
+            print "User {0} already has role {1} in tenant {2}".format(admin_user.name, admin_role.name, tenant.name)
 
     return new_user
 
+
+def unassign_admin_from_tenant(keystone, tenant):
+    admin_user = keystone.users.find(name='admin')
+    admin_role = keystone.roles.find(name='admin')
+    try:
+        keystone.roles.remove_user_role(admin_user, admin_role, tenant)
+    except NotFound as e:
+        print "Unassignment unsuccesfull: {0}".format(e.msg)
+        return False
+    
+    return True
 
 def create_internal_network(neutron, network_name='private_network', network_address='192.168.0.0/24'):
     neutron.format = 'json'
@@ -99,6 +120,59 @@ def create_internal_network(neutron, network_name='private_network', network_add
 
     return network, subnet
 
+
+def preset_default_security_group(neutron, tenant):
+    # find default sucurity group id
+    security_groups = neutron.list_security_groups()['security_groups']
+    def_sec_group_id = [secg['id'] for secg in security_groups if secg['name'] == 'default' and secg['tenant_id'] == tenant.id][0]
+
+    # define request bodies
+    sec_group_rule_icmp = {'security_group_rule': { 'direction': 'ingress', 
+                                                    'security_group_id': def_sec_group_id, 
+                                                    'port_range_min': None, 
+                                                    'port_range_max': None, 
+                                                    'protocol': 'icmp',  
+                                                    'remote_group_id': None, 
+                                                    'remote_ip_prefix': '0.0.0.0/0' }}
+
+    sec_group_rule_tcp = {'security_group_rule': { 'direction': 'ingress', 
+                                                   'security_group_id': def_sec_group_id, 
+                                                   'port_range_min': None, 
+                                                   'port_range_max': None, 
+                                                   'protocol': 'tcp', 
+                                                   'remote_group_id': None, 
+                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+
+    sec_group_rule_udp = {'security_group_rule': { 'direction': 'ingress', 
+                                                   'security_group_id': def_sec_group_id, 
+                                                   'port_range_min': None, 
+                                                   'port_range_max': None, 
+                                                   'protocol': 'udp',  
+                                                   'remote_group_id': None, 
+                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+
+    # send requests to create groups
+    try:
+        neutron.create_security_group_rule(sec_group_rule_icmp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    try:
+        neutron.create_security_group_rule(sec_group_rule_tcp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    try:
+        neutron.create_security_group_rule(sec_group_rule_udp)
+    except neutronclient.common.exceptions.NeutronClientException as e:
+        print "Scurity group exists {0}".format(e.message)
+
+    # delete default rules in default group
+    security_group_rules = neutron.list_security_group_rules()['security_group_rules']
+    def_sec_group_rules_id = [secgr['id'] for secgr in security_group_rules if secgr['tenant_id'] == tenant.id and secgr['protocol'] == None and secgr['direction'] == 'ingress']
+
+    for secrule_id in def_sec_group_rules_id:
+        neutron.delete_security_group_rule(secrule_id)
 
 def create_router(neutron, router_name='tenant_to_public', external_net_name='ext_net',
                   private_subnet_name='sub_private_network'):
@@ -155,13 +229,23 @@ def main():
 
     keystone = ksclient.Client(**service_creds)
     new_tenant = create_tenant(keystone, new_tenant_name)
-    create_user(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name)
+    create_and_assign_users(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name, assign_admin=True)
 
     keystone_creds['tenant_name'] = new_tenant.name
     neutron = nclient.Client(**keystone_creds)
 
-    create_internal_network(neutron)
-    create_router(neutron, external_net_name=args.extnet)
+    create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
+    create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
+    preset_default_security_group(neutron, new_tenant)
+
+    ncreds = get_nova_creds()
+    ncreds['project_id'] = new_tenant.name
+    nova = novaclient.Client(**ncreds)
+    nova.quotas.update(new_tenant.id, 
+                       ram=25600, cores=40, injected_file_content_bytes=10240, 
+                       instances=20, key_pairs=10, floating_ips=20, security_groups=20, security_group_rules=40)
+
+    unassign_admin_from_tenant(keystone, new_tenant)
 
 if __name__ == "__main__":
     main()
