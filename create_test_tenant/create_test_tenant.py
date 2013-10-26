@@ -138,7 +138,8 @@ def main():
     parser.add_argument('user_email', action="store", help="User email will be used as name of tenant")
     parser.add_argument('password', action="store", help="Password for user")
     parser.add_argument('--extnet', '-e', action="store", default='external_network', help="Name of external network")
-    parser.add_argument('--tenusername', '-t', action="store", help="Default tenant and user name is email address, but can be overriden with this parameter")
+    parser.add_argument('--tenusername', '-t', action="store",
+                        help="Default tenant and user name is email address, but can be overriden with this parameter")
 
     args = parser.parse_args()
 
