@@ -1,7 +1,7 @@
 __author__ = 'kmadac'
 """
 Script prepares new tenant with the following properties:
-1. Create new tenant. Name is specified as a user email as command line parameter
+1. Creates new tenant. Name is specified as a user email as command line parameter
 2. Creates new user and this user is added _member_ to tenant. Password is second argument of script
 3. Admin user will be added to tenant with role admin
 4. Private network is created
@@ -45,6 +45,7 @@ def get_service_creds():
     d['endpoint'] = os.environ['OS_SERVICE_ENDPOINT']
     return d
 
+
 def create_tenant(keystone, useremail):
     new_tenant = None
     try:
@@ -56,7 +57,8 @@ def create_tenant(keystone, useremail):
     return new_tenant
 
 
-def create_and_assign_users(keystone, useremail, password, tenant, role_name='_member_', username=None, assign_admin=False):
+def create_and_assign_users(keystone, useremail, password, tenant, role_name='_member_', username=None,
+                            assign_admin=False):
     new_user = None
 
     if not username:
@@ -130,32 +132,33 @@ def create_internal_network(neutron, network_name='private_network', network_add
 def preset_default_security_group(neutron, tenant):
     # find default sucurity group id
     security_groups = neutron.list_security_groups()['security_groups']
-    def_sec_group_id = [secg['id'] for secg in security_groups if secg['name'] == 'default' and secg['tenant_id'] == tenant.id][0]
+    def_sec_group_id = [secg['id'] for secg in security_groups
+                        if secg['name'] == 'default' and secg['tenant_id'] == tenant.id][0]
 
     # define request bodies
-    sec_group_rule_icmp = {'security_group_rule': { 'direction': 'ingress', 
-                                                    'security_group_id': def_sec_group_id, 
-                                                    'port_range_min': None, 
-                                                    'port_range_max': None, 
-                                                    'protocol': 'icmp',  
-                                                    'remote_group_id': None, 
-                                                    'remote_ip_prefix': '0.0.0.0/0' }}
+    sec_group_rule_icmp = {'security_group_rule': {'direction': 'ingress',
+                                                   'security_group_id': def_sec_group_id,
+                                                   'port_range_min': None,
+                                                   'port_range_max': None,
+                                                   'protocol': 'icmp',
+                                                   'remote_group_id': None,
+                                                   'remote_ip_prefix': '0.0.0.0/0'}}
 
-    sec_group_rule_tcp = {'security_group_rule': { 'direction': 'ingress', 
-                                                   'security_group_id': def_sec_group_id, 
-                                                   'port_range_min': None, 
-                                                   'port_range_max': None, 
-                                                   'protocol': 'tcp', 
-                                                   'remote_group_id': None, 
-                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+    sec_group_rule_tcp = {'security_group_rule': {'direction': 'ingress',
+                                                  'security_group_id': def_sec_group_id,
+                                                  'port_range_min': None,
+                                                  'port_range_max': None,
+                                                  'protocol': 'tcp',
+                                                  'remote_group_id': None,
+                                                  'remote_ip_prefix': '0.0.0.0/0'}}
 
-    sec_group_rule_udp = {'security_group_rule': { 'direction': 'ingress', 
-                                                   'security_group_id': def_sec_group_id, 
-                                                   'port_range_min': None, 
-                                                   'port_range_max': None, 
-                                                   'protocol': 'udp',  
-                                                   'remote_group_id': None, 
-                                                   'remote_ip_prefix': '0.0.0.0/0' }}
+    sec_group_rule_udp = {'security_group_rule': {'direction': 'ingress',
+                                                  'security_group_id': def_sec_group_id,
+                                                  'port_range_min': None,
+                                                  'port_range_max': None,
+                                                  'protocol': 'udp',
+                                                  'remote_group_id': None,
+                                                  'remote_ip_prefix': '0.0.0.0/0'}}
 
     # send requests to create groups
     try:
@@ -175,7 +178,9 @@ def preset_default_security_group(neutron, tenant):
 
     # delete default rules in default group
     security_group_rules = neutron.list_security_group_rules()['security_group_rules']
-    def_sec_group_rules_id = [secgr['id'] for secgr in security_group_rules if secgr['tenant_id'] == tenant.id and secgr['protocol'] == None and secgr['direction'] == 'ingress']
+    def_sec_group_rules_id = [secgr['id'] for secgr in security_group_rules
+                              if secgr['tenant_id'] == tenant.id and secgr['protocol'] == None
+                              and secgr['direction'] == 'ingress']
 
     for secrule_id in def_sec_group_rules_id:
         neutron.delete_security_group_rule(secrule_id)
@@ -236,13 +241,15 @@ def main():
 
     keystone = ksclient.Client(**service_creds)
     new_tenant = create_tenant(keystone, new_tenant_name)
-    create_and_assign_users(keystone, args.user_email, password=args.password, tenant=new_tenant, username=new_user_name, assign_admin=True)
+    create_and_assign_users(keystone, args.user_email, password=args.password,
+                            tenant=new_tenant, username=new_user_name, assign_admin=True)
 
     keystone_creds['tenant_name'] = new_tenant.name
     neutron = nclient.Client(**keystone_creds)
 
     create_internal_network(neutron, network_name='private_network_'+new_tenant_name, network_address='5.1.1.0/24')
-    create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet, private_subnet_name='sub_private_network_'+new_tenant_name)
+    create_router(neutron, router_name='external_router_'+new_tenant_name, external_net_name=args.extnet,
+                  private_subnet_name='sub_private_network_'+new_tenant_name)
     preset_default_security_group(neutron, new_tenant)
 
     ncreds = get_nova_creds()
