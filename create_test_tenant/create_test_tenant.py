@@ -7,6 +7,8 @@ Script prepares new tenant with the following properties:
 4. Private network is created
 5. Router is created
 6. Router is connected to external network and to private network
+7. Default security group set to Allow All traffic
+8. Update quotas for the project
 """
 
 import os
