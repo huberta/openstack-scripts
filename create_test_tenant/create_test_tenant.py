@@ -20,6 +20,7 @@ import argparse
 
 import pdb
 
+
 def get_keystone_creds():
     d = dict()
     d['username'] = os.environ['OS_USERNAME']
@@ -27,12 +28,14 @@ def get_keystone_creds():
     d['auth_url'] = os.environ['OS_AUTH_URL']
     return d
 
+
 def get_nova_creds():
     d = dict()
     d['username'] = os.environ['OS_USERNAME']
     d['api_key'] = os.environ['OS_PASSWORD']
     d['auth_url'] = os.environ['OS_AUTH_URL']
     return d
+
 
 def get_service_creds():
     d = dict()
@@ -91,6 +94,7 @@ def unassign_admin_from_tenant(keystone, tenant):
         return False
     
     return True
+
 
 def create_internal_network(neutron, network_name='private_network', network_address='192.168.0.0/24'):
     neutron.format = 'json'
@@ -173,6 +177,7 @@ def preset_default_security_group(neutron, tenant):
 
     for secrule_id in def_sec_group_rules_id:
         neutron.delete_security_group_rule(secrule_id)
+
 
 def create_router(neutron, router_name='tenant_to_public', external_net_name='ext_net',
                   private_subnet_name='sub_private_network'):
