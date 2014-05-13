@@ -8,7 +8,7 @@ It helps to find which part of quantum path causes problem.
 
 ### Using ###
 
-Script has to be run from control node. It suppose thet network node is installed on control node!
+Script has to be executed from control node. It supposes that network node is installed on control node!
 
     dhcpdump.sh instance_name ip_address_of_internal_network
 
