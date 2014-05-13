@@ -35,7 +35,7 @@ NET_ID=`$QUANTUM net-list | $GREP $SUBNET_ID | $AWK -F" | " '{print substr($2,1,
 DHCP_TAP=`$IP netns exec qdhcp-$NET_ID $IP a | $GREP inet | $GREP tap | $AWK -F" " '{print $7}'`
 
 if [[ -z "$DHCP_TAP" ]]; then
-  echo "Error: Missing tap interface DHCP namespace: qdhcp-$NET_ID!!!"
+  echo "Error: Missing tap interface in DHCP namespace: qdhcp-$NET_ID!!!"
   exit 1
 fi
 
