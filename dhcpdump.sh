@@ -17,11 +17,27 @@ NOVADBUSER=`$GAWK 'match($0,/mysql:\/\/(.*):(.*)@(.*)\//, a) {print a[1]}' /etc/
 NOVADBPASS=`$GAWK 'match($0, /mysql:\/\/(.*):(.*)@(.*)\//, a) {print a[2]}' /etc/nova/nova.conf`
 DBHOST=`$GAWK 'match($0, /mysql:\/\/(.*):(.*)@(.*)\//, a) {print a[3]}' /etc/nova/nova.conf`
 
+if [[ -z "$NOVADBUSER" ]]; then
+  echo "Error: DB user for nova not found!!!"
+  exit 1
+fi
+
 HYPERVISORNAME=`$MYSQL -h $DBHOST -u$NOVADBUSER -p$NOVADBPASS -B -D nova -e "select host from instances where display_name='$VMNAME';" | grep -v host`
+
+if [[ -z "$HYPERVISORNAME" ]]; then
+  echo "Error: Hypervisor name not found for $VMNAME!!!"
+  exit 1
+fi
+
 INT_SUFFIX=`$QUANTUM port-list |  $GREP $INTERNALIP | $AWK -F" | " '{print substr($2, 0, 11)}'`
 SUBNET_ID=`$QUANTUM port-list |  $GREP $INTERNALIP | $AWK -F": " '{print substr($2, 2, 36)}'`
 NET_ID=`$QUANTUM net-list | $GREP $SUBNET_ID | $AWK -F" | " '{print substr($2,1,36)}'`
 DHCP_TAP=`$IP netns exec qdhcp-$NET_ID $IP a | $GREP inet | $GREP tap | $AWK -F" " '{print $7}'`
+
+if [[ -z "$DHCP_TAP" ]]; then
+  echo "Error: Missing tap interface DHCP namespace: qdhcp-$NET_ID!!!"
+  exit 1
+fi
 
 echo "VMname = $VMNAME"
 echo "Hypervisor = $HYPERVISORNAME"
@@ -31,7 +47,7 @@ echo "Net = $NET_ID"
 echo "DHCP Tap = $DHCP_TAP"
 
 if [ $LOCALHOSTNAME != $HYPERVISORNAME ]; then
-  SSH="ssh root@HYPERVISORNAME"
+  SSH="ssh root@$HYPERVISORNAME"
   echo "VM on remote host"
 fi
 
