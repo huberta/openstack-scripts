@@ -12,6 +12,16 @@ TCPDUMPFILTER="'(port bootps) or icmp'"
 LOCALHOSTNAME=`/bin/hostname -f`
 GAWK=/usr/bin/gawk
 
+if [ $# -lt 2 ]; then
+echo "Usage: $0 <fixed_ip> <tenant_name>";
+echo "";
+echo "<fixed_ip> - IP address of VM in fixed network";
+echo "<tenant_name> - Name of tenant, where VM belongs";
+echo "";
+exit 1;
+fi
+
+
 INTERNALIP=$1
 TENANT_NAME=$2
 
@@ -42,7 +52,7 @@ do
 done
 
 if [[ -z "$VM_NAME" ]]; then
-  echo "Error: VM Name not found!!!"
+  echo "Error: VM with IP $INTERNALIP not found!!!"
   exit 1
 fi
 
