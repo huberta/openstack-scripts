@@ -76,7 +76,6 @@ fi
 echo "VMname = $VM_NAME"
 echo "Hypervisor = $HYPERVISORNAME"
 echo "Interface suffix = $INT_SUFFIX"
-#echo "Subnet = $SUBNET_ID"
 echo "Net = $NET_ID"
 echo "DHCP Tap = $DHCP_TAP"
 
