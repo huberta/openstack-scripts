@@ -35,11 +35,11 @@ quantum security-group-rule-list -F "tenant_id" -F id -v 2>&1 | grep "DEBUG\: qu
 sec_group_rules=$(python -c "import json; my_data=json.loads(open(\"/tmp/.json\").read()); print(' '.join([i['id'] for i in my_data['security_group_rules'] if i['tenant_id'] == u'$tenantid']))")
 for i in $sec_group_rules; do quantum security-group-rule-delete $i; done
 
-        sec_group_id=$(quantum security-group-list -c name -c id -c tenant_id | grep default | grep $tenantid | awk '{print $4}')
+sec_group_id=$(quantum security-group-list -c name -c id -c tenant_id | grep default | grep $tenantid | awk '{print $4}')
 
-        quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol icmp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
-        quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol tcp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
-        quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol udp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
+quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol icmp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
+quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol tcp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
+quantum security-group-rule-create --tenant-id $tenantid --direction ingress --protocol udp --remote-ip-prefix 0.0.0.0/0 --ethertype IPv4 $sec_group_id
 
 # Remove assignment of users from original tenants
 for i in $users; do keystone user-role-remove --user $i --role _member_ --tenant $i; done
