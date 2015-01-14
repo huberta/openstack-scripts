@@ -1,8 +1,12 @@
 #!/bin/bash
 # Author: kamil.madac@gmail.com
-# Merge multiple tenant into one. Reason for this is that there are teams who needs larger quotas and they agree that they share one tenant.
+# Merge multiple tenant into one.
+# Reason for this is that there are teams who needs larger quotas and they agree to share one tenant for multiple users.
+# Original tenants will still exist, but won't be accessible for users assigned to group tenant.
 # Tested and used on OpenStack Grizzly install on Ubuntu 12.04 LTS Cloud Archive repo
-# Script will create new tenant, sets quotas, networks, security rules, adds users as a tenant members and removes users from their original projects
+#
+# Script creates new tenant, sets quotas, networks, security rules, 
+#  adds users as a tenant members and removes users from their original projects
 
 tenant_name=group.newtenant
 users="kamil.madac jozo.muska"
